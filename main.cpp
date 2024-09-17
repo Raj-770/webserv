@@ -20,7 +20,7 @@ int main () {
 		"HTTP/1.1 200 OK\r\n"
 		"Content-Type: text/html\r\n"
 		"Content-Length: 46\r\n"
-		"Connection: close\r\n"
+		"Connection: keep-alive\r\n"
 		"\r\n"
 		"<html><body><h1>Hello from server!</h1></body></html>";
 
@@ -56,24 +56,36 @@ int main () {
 		return -1;
 	}
 
-	// Accepting an incoming connection
-	new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-	if (new_socket < 0){
-		std::cerr << "Accept failed!" << std::endl;
-		close(server_fd);
-		return -1;
+	// Handling multiple requests
+	while (true) {
+		// Accepting an incoming connection
+		new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+		if (new_socket < 0){
+			std::cerr << "Accept failed!" << std::endl;
+			close(server_fd);
+			return -1;
+		}
+
+		// Reading from the client
+		memset(buffer, 0, 1024);
+		int bytes_read = read(new_socket, buffer, 1024);
+		if (bytes_read == 0) {
+			std::cerr << "Client disconnected" << std::endl;
+			break;
+		}
+		std::cout << "Message received: " << buffer << std::endl;
+
+		// Sending a response to the client
+		send(new_socket, http_response, strlen(http_response), 0);
+		std::cout << "HTTP response sent"<< std::endl;
+
+		// Check for a specific quit command or handle other termination conditions
+		if (strstr(buffer, "quit") != nullptr) {
+			break;
+		}
+		close(new_socket);
 	}
-
-	// Reading from the client
-	read(new_socket, buffer, 1024);
-	std::cout << "Message received: " << buffer << std::endl;
-
-	// Sending a response to the client
-	send(new_socket, http_response, strlen(http_response), 0);
-	std::cout << "HTTP response sent"<< std::endl;
-
-	// Closing the socket
-	close(new_socket);
+	// Closing the server_fd
 	close(server_fd);
 	return (0);
 }
