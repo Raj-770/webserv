@@ -1,8 +1,7 @@
-#include <iostream>
-#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "RequestParser.hpp"
 
 #define PORT 8080
 
@@ -73,11 +72,30 @@ int main () {
 			std::cerr << "Client disconnected" << std::endl;
 			break;
 		}
-		std::cout << "Message received: " << buffer << std::endl;
+		std::cout << "Message received: " << std::endl;
+
+		std::string request(buffer);
+
+		// Parse the HTTP Request using the HttpRequestParser class
+		RequestParser httpRequest(request);
+
+		// Output parsed request details
+		std::cout << "Method: " << httpRequest.getMethod() << std::endl;
+		std::cout << "URI: " << httpRequest.getUri() << std::endl;
+		std::cout << "HTTP Version: " << httpRequest.getHttpVersion() << std::endl;
 
 		// Sending a response to the client
 		send(new_socket, http_response, strlen(http_response), 0);
 		std::cout << "HTTP response sent"<< std::endl;
+
+		std::cout << "Headers:" << std::endl;
+		for (const auto& header : httpRequest.getHeaders()) {
+			std::cout << header.first << ": " << header.second << std::endl;
+		}
+
+		if (!httpRequest.getBody().empty()) {
+			std::cout << "Body: " << httpRequest.getBody() << std::endl;
+		}
 
 		// Check for a specific quit command or handle other termination conditions
 		if (strstr(buffer, "quit") != nullptr) {
